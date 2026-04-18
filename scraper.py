@@ -113,11 +113,22 @@ def run_scrape():
     conn = sqlite3.connect(DB_PATH)
     init_db(conn)
 
+    items = []
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
-        page.goto(BASE_URL + 'page-1.html', timeout=60000)
-        items = scrape_page(page)
+        page_number = 1
+
+        while True:
+            page_url = BASE_URL + f'page-{page_number}.html'
+            page.goto(page_url, timeout=60000)
+            items.extend(scrape_page(page))
+
+            next_button = page.query_selector('.next a')
+            if not next_button:
+                break
+            page_number += 1
+
         browser.close()
 
     save_to_db(conn, items)
