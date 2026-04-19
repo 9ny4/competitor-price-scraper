@@ -31,11 +31,12 @@ def init_db(conn):
 
 
 def parse_price(price_text):
-    # price_text like "£53.74" or "£53.74 (sale)"
+    # price_text like "£53.74" or "£53.74 (sale)" or "£53.74 Sale"
     if not price_text:
         return None
     cleaned = price_text.replace('£', '').strip()
     cleaned = cleaned.split()[0]
+    cleaned = cleaned.replace('(', '').replace(')', '')
     try:
         return float(cleaned)
     except ValueError:
