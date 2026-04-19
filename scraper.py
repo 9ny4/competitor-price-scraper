@@ -9,6 +9,9 @@ from playwright.sync_api import sync_playwright
 import schedule
 import time
 
+# Load .env before reading any env vars so user-configured values take effect.
+load_dotenv()
+
 DB_PATH = os.getenv('DB_PATH', 'prices.db')
 BASE_URL = 'https://books.toscrape.com/catalogue/'
 EXPORT_DIR = os.getenv('EXPORT_DIR', 'exports')
@@ -47,9 +50,17 @@ def scrape_page(page):
     items = []
     cards = page.query_selector_all('.product_pod')
     for card in cards:
-        title = card.query_selector('h3 a').get_attribute('title')
-        price_text = card.query_selector('.price_color').inner_text()
-        rating = card.query_selector('.star-rating').get_attribute('class').replace('star-rating ', '')
+        title_el = card.query_selector('h3 a')
+        price_el = card.query_selector('.price_color')
+        rating_el = card.query_selector('.star-rating')
+
+        if not title_el or not price_el or not rating_el:
+            # Incomplete card — skip rather than crash the whole scrape run.
+            continue
+
+        title = title_el.get_attribute('title')
+        price_text = price_el.inner_text()
+        rating = rating_el.get_attribute('class').replace('star-rating ', '')
         items.append({
             'title': title,
             'price': parse_price(price_text),
@@ -109,7 +120,6 @@ def send_email(report_path):
 
 
 def run_scrape():
-    load_dotenv()
     conn = sqlite3.connect(DB_PATH)
     init_db(conn)
 
